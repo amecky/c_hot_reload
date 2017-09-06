@@ -1,0 +1,6 @@
+sandbox/Debug/
+dll/x64/
+dll/Debug/
+dll/.vs/first_plugin/v14/.suo
+sandbox/.vs/Sandbox/v14/.suo
+*.sdf
