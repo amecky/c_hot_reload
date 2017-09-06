@@ -1,6 +1,7 @@
 #pragma once
 
 #define FIRST_PLUGIN_NAME "first_plugin"
+
 extern "C" {
 
 	struct FirstPlugin {

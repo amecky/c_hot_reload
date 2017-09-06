@@ -7,7 +7,7 @@
 extern "C" {
 
 	int my_add(int a, int b) {
-		return (a + b) * 4;
+		return (a + b) * 18;
 	}
 
 	static FirstPlugin INSTANCE = { my_add };
