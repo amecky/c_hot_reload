@@ -239,7 +239,11 @@ static bool plugin_registry_load_plugin(Plugin* plugin) {
 			log("ERROR: cannot free library");
 		}
 	}
-	sprintf_s(new_buffer, "%s\\%s_____.dll", plugin->path, plugin->name);
+	// we need a absolute path 
+	GetCurrentDirectory(256, fqn);
+	log("current dir: %s", fqn);
+	// we are copying the file to the current directory to prevent locking
+	sprintf_s(new_buffer, "%s\\%s.dll", fqn, plugin->name);
 	log("copy %s to %s\n", buffer, new_buffer);
 	get_file_time(buffer, plugin->fileTime);
 	CopyFile(buffer, new_buffer, false);	
@@ -276,6 +280,11 @@ plugin_registry create_registry() {
 // ---------------------------------------------------
 void shutdown_registry() {
 	if (_ctx != 0) {
+		for (size_t i = 0; i < _ctx->plugins.size(); ++i) {
+			if (_ctx->plugins[i].instance) {
+				FreeLibrary(_ctx->plugins[i].instance);
+			}
+		}
 		delete _ctx;
 		// FIXME: call shutdown on all registered plugins???
 	}
