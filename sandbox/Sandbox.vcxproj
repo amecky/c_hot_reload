@@ -146,11 +146,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ApiRegistry.h" />
+    <ClInclude Include="logger.h" />
+    <ClInclude Include="PluginRegistry.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ApiRegistry.cpp" />
-    <ClCompile Include="Sandbox.cpp" />
+    <ClCompile Include="logger.cpp" />
+    <ClCompile Include="PluginRegistry.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -7,10 +7,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ApiRegistry.h" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="PluginRegistry.cpp" />
+    <ClCompile Include="logger.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Sandbox.cpp" />
-    <ClCompile Include="ApiRegistry.cpp" />
+    <ClInclude Include="PluginRegistry.h" />
+    <ClInclude Include="logger.h" />
   </ItemGroup>
 </Project>

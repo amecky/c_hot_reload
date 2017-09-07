@@ -4,13 +4,24 @@
 
 extern "C" {
 
-	struct FirstPlugin {
+	struct FirstPluginData {
 
-		int(*add)(int a, int b);
+		int value;
 	};
 
-	struct ds_api_registry;
+	struct FirstPlugin {
 
-	__declspec(dllexport) void load_first_plugin(ds_api_registry* registry);
+		FirstPluginData* data;
+
+		int(*add)(int a, int b);
+
+		void(*set_value)(FirstPluginData* data, int v);
+
+		int(*get_value)(FirstPluginData* data);
+	};
+
+	struct plugin_registry;
+
+	__declspec(dllexport) void load_first_plugin(plugin_registry* registry);
 
 }

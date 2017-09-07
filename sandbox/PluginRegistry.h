@@ -6,9 +6,13 @@ struct PluginInstance {
 	uint32_t pluginHash;
 };
 
-struct ds_api_registry {
+struct plugin_registry {
 
-	void (*add)(const char* name, void* interf);
+	void (*add)(const char* name, void* interf, size_t size);
+
+	bool (*contains)(const char* name);
+
+	void*(*get_plugin_data)(const char* name);
 
 	PluginInstance* (*get)(const char* name);
 
@@ -17,6 +21,6 @@ struct ds_api_registry {
 	bool(*load_plugin)(const char* path, const char* name);
 };
 
-ds_api_registry create_registry();
+plugin_registry create_registry();
 
 void shutdown_registry();

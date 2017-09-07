@@ -1,18 +1,37 @@
 // first_plugin.cpp : Defines the exported functions for the DLL application.
 //
 
-#include <ApiRegistry.h>
+#include <PluginRegistry.h>
 #include "first_plugin.h"
+#include <string.h>
+#include <stdio.h>
 
 extern "C" {
 
+	int my_add(int a, int b);
+
+	void my_set_value(FirstPluginData* data, int v);
+
+	int my_get_value(FirstPluginData* data);
+
+	static FirstPlugin INSTANCE = { 0, my_add, my_set_value, my_get_value };
+
 	int my_add(int a, int b) {
-		return (a + b) * 18;
+		return (a + b) * 6;
 	}
 
-	static FirstPlugin INSTANCE = { my_add };
+	void my_set_value(FirstPluginData* data,int v) {
+		data->value = v;
+	}
 
-	__declspec(dllexport) void load_first_plugin(ds_api_registry* registry) {
-		registry->add(FIRST_PLUGIN_NAME, &INSTANCE);
+	int my_get_value(FirstPluginData* data) {
+		return data->value;
+	}
+
+	
+
+	__declspec(dllexport) void load_first_plugin(plugin_registry* registry) {		
+		registry->add(FIRST_PLUGIN_NAME, &INSTANCE, sizeof(FirstPlugin));
+		
 	}
 }

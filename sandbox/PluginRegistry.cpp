@@ -1,9 +1,11 @@
-#include "ApiRegistry.h"
+#include "PluginRegistry.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <string.h>
 #include <vector>
 #include <strsafe.h>
+#include "logger.h"
+#include "..\dll\first_plugin.h"
 
 void ErrorExit(const char* lpszFunction) {
 	// Retrieve the system error message for the last-error code
@@ -59,6 +61,7 @@ struct Plugin {
 	const char* name;
 	const char* path;
 	void* data;
+	size_t size;
 	uint32_t hash;
 	FILETIME fileTime;
 	HINSTANCE instance;
@@ -76,7 +79,7 @@ struct RegistryContext {
 
 static RegistryContext* _ctx = 0;
 
-typedef void(*LoadFunc)(ds_api_registry*);
+typedef void(*LoadFunc)(plugin_registry*);
 
 // ---------------------------------------------------
 // get filetime
@@ -99,11 +102,11 @@ bool requires_reload(const Plugin& descriptor) {
 	FILETIME now;
 	char buffer[256];
 	sprintf_s(buffer, "%s\\%s.dll", descriptor.path, descriptor.name);
-	printf("checking %s\n", buffer);
+	log("checking %s", buffer);
 	get_file_time(buffer, now);
 	int t = CompareFileTime(&descriptor.fileTime, &now);
 	if (t == -1) {
-		printf("=> requires reload");
+		log("=> requires reload");
 		return true;
 	}
 	return false;
@@ -112,7 +115,7 @@ bool requires_reload(const Plugin& descriptor) {
 // ---------------------------------------------------
 // find index of plugin by name
 // ---------------------------------------------------
-int find_plugin(const char* name) {
+static int find_plugin(const char* name) {
 	uint32_t h = fnv1a(name);
 	for (size_t i = 0; i < _ctx->plugins.size(); ++i) {
 		if (_ctx->plugins[i].hash == h) {
@@ -123,38 +126,57 @@ int find_plugin(const char* name) {
 }
 
 // ---------------------------------------------------
-// add new plugin 
+// contains
 // ---------------------------------------------------
-void api_registry_add(const char* name, void* interf) {
+bool plugin_registry_contains(const char* name) {
 	int idx = find_plugin(name);
 	if (idx != -1) {
-		printf("updating existing plugin\n");
+		// we still need to check if we have an instance
+		return _ctx->plugins[idx].instance != 0;
+	}
+	return false;
+}
+
+void* plugin_registry_get_plugin_data(const char* name) {
+	int idx = find_plugin(name);
+	log("get_plugin_data - idx: %d", idx);
+	if (idx != -1) {
+		return _ctx->plugins[idx].data;
+	}
+	return 0;
+}
+// ---------------------------------------------------
+// add new plugin 
+// ---------------------------------------------------
+void plugin_registry_add(const char* name, void* interf, size_t size) {
+	int idx = find_plugin(name);
+	if (idx != -1) {
+		log("updating existing plugin");
 		Plugin& p = _ctx->plugins[idx];
 		p.data = interf;
+		p.size = size;
 		uint32_t h = fnv1a(name);
 		for (size_t i = 0; i < _ctx->instances.size(); ++i) {
 			if (_ctx->instances[i].pluginHash == h) {
-				printf("patching %d\n", i);
+				log("patching %d\n", i);
 				_ctx->instances[i].data = p.data;
 			}
 		}
 	}
 	else {
-		printf("ERROR: plugin not found\n");
-		//Plugin np = { name, interf, fnv1a(name) };
-		//_ctx->plugins.push_back(np);
+		log("ERROR: plugin not found");
 	}
 };
 
 // ---------------------------------------------------
 // get plugin
 // ---------------------------------------------------
-PluginInstance* api_registry_get(const char* name) {
+PluginInstance* plugin_registry_get(const char* name) {
 	uint32_t h = fnv1a(name);
 	for (size_t i = 0; i < _ctx->plugins.size(); ++i) {
 		if (_ctx->plugins[i].hash == h) {
 			PluginInstance inst = { _ctx->plugins[i].data, h };
-			printf("creating new instance\n");
+			log("creating new instance");
 			_ctx->instances.push_back(inst);
 			return &_ctx->instances[_ctx->instances.size() - 1];
 		}
@@ -162,28 +184,35 @@ PluginInstance* api_registry_get(const char* name) {
 	return 0;
 }
 
-bool api_registry_load_plugin(const char* path, const char* name);
+bool plugin_registry_load_plugin(const char* path, const char* name);
 
-bool api_registry_load_plugin(Plugin* plugin);
+bool plugin_registry_load_plugin(Plugin* plugin);
 
 // ---------------------------------------------------
 // check plugins
 // ---------------------------------------------------
-void api_registry_check_plugins() {
+void plugin_registry_check_plugins() {
 	for (size_t i = 0; i < _ctx->plugins.size(); ++i) {
 		Plugin& p = _ctx->plugins[i];
 		if (requires_reload(p)) {
-			api_registry_load_plugin(&p);
+			plugin_registry_load_plugin(&p);
 		}
 	}
 }
 
-static ds_api_registry REGISTRY = { api_registry_add, api_registry_get,api_registry_check_plugins,api_registry_load_plugin };
+static plugin_registry REGISTRY = { 
+	plugin_registry_add, 
+	plugin_registry_contains, 
+	plugin_registry_get_plugin_data,
+	plugin_registry_get,
+	plugin_registry_check_plugins,
+	plugin_registry_load_plugin 
+};
 
 // ---------------------------------------------------
 // load plugin
 // ---------------------------------------------------
-bool api_registry_load_plugin(const char* path, const char* name) {
+bool plugin_registry_load_plugin(const char* path, const char* name) {
 	Plugin descriptor;
 	descriptor.name = name;
 	descriptor.path = path;
@@ -191,42 +220,45 @@ bool api_registry_load_plugin(const char* path, const char* name) {
 	descriptor.data = 0;
 	descriptor.hash = fnv1a(name);
 	_ctx->plugins.push_back(descriptor);
-	return api_registry_load_plugin(&_ctx->plugins[_ctx->plugins.size() - 1]);
+	return plugin_registry_load_plugin(&_ctx->plugins[_ctx->plugins.size() - 1]);
 }
 
 // ---------------------------------------------------
 // load plugin
 // ---------------------------------------------------
-static bool api_registry_load_plugin(Plugin* plugin) {
-	char buffer[256];
+static bool plugin_registry_load_plugin(Plugin* plugin) {
+	char fqn[256];
 	char new_buffer[256];
-	sprintf_s(buffer, "%s\\%s.dll", plugin->path, plugin->name);
+	char buffer[256];
+	sprintf_s(fqn, "%s\\%s.dll", plugin->path, plugin->name);
+	// we have to do it like this because LoadLibrary does not like relative paths
+	DWORD retval = GetFullPathName(fqn, 256, buffer, 0);
 	if (plugin->instance) {
-		printf("freeing old instance");
+		log("freeing old instance");
 		if (!FreeLibrary(plugin->instance)) {
-			printf("ERROR: cannot free library\n");
+			log("ERROR: cannot free library");
 		}
 	}
 	sprintf_s(new_buffer, "%s\\%s_____.dll", plugin->path, plugin->name);
-	printf("copy %s to %s\n", buffer, new_buffer);
+	log("copy %s to %s\n", buffer, new_buffer);
 	get_file_time(buffer, plugin->fileTime);
 	CopyFile(buffer, new_buffer, false);	
 	plugin->instance = LoadLibrary(new_buffer);
 	if (plugin->instance) {
-		printf("we have got a handle\n");
+		log("we have got a handle");
 		sprintf_s(buffer, "load_%s", plugin->name);
 		LoadFunc lf = (LoadFunc)GetProcAddress(plugin->instance, buffer);
 		if (lf) {			
 			(lf)(&REGISTRY);
-			printf("LOADED\n");
+			log("LOADED\n");
 			return true;
 		}
 		else {
-			printf("ERROR: Could not find method\n");
+			log("ERROR: Could not find method");
 		}
 	}
 	else {
-		ErrorExit("ERROR: No instance\n");
+		ErrorExit("ERROR: No instance");
 	}
 	return false;
 }
@@ -234,7 +266,7 @@ static bool api_registry_load_plugin(Plugin* plugin) {
 // ---------------------------------------------------
 // create registry
 // ---------------------------------------------------
-ds_api_registry create_registry() {
+plugin_registry create_registry() {
 	_ctx = new RegistryContext;
 	return REGISTRY;
 }
