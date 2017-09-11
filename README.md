@@ -1,5 +1,11 @@
 # Goal
 
+The goal is to provide a simple solution to reload parts of the application dynamically at runtime.
+
+# Note
+
+I am currently working on this document. This is more of a draft rather than a full documentation.
+
 # Reference
 
 I have been following the inspiring blog ourmachinery.com. They have described a pretty neat
