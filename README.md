@@ -12,6 +12,18 @@ I have been following the inspiring blog ourmachinery.com. They have described a
 plugin system. Everything that you will find here is based on their ideas. You can find a very
 detailed explanation [here](http://ourmachinery.com/post/little-machines-working-together-part-1/) and [here](http://ourmachinery.com/post/little-machines-working-together-part-2/).
 
+# The basic idea
+
+The basic is idea to separate the code into plugins that contain only small parts of your application. These plugins will be provided
+as DLLs and the application should reload them if they have changed. There is a registry which is used to load the plugins and also
+handles the reload. Plugins can also use other plugins by using the registry.
+
+Another idea is to split such a plugin into data and code. The data will live inside the main application and should not be 
+changed during a hot reload. We want to keep the data but just change the implementation of the plugin.
+
+Therefore this solution uses C and not C++. Trying to achieve the same with C++ is much harder. It also contradicts the
+idea of separating code and data. 
+
 # What we have here
 
 - restricted to C only
@@ -60,7 +72,7 @@ struct FirstPlugin {
 ```
 First we define a struct describing the data we need. In order to keep the data outside we need to pass
 it to every function that will work on the data. This is mainly because the data should be kept alive
-during a reload. It the data would live inside the plugin it would be reset everytime. 
+during a reload. It the data would live inside the plugin it would be reset every time. 
 Here is a short example (the code will be explained further down):
 ```
 PluginInstance* inst = registry.get(FIRST_PLUGIN_NAME);
@@ -110,7 +122,7 @@ PluginInstance* inst = registry.get(FIRST_PLUGIN_NAME);
 FirstPlugin* tmp = (FirstPlugin*)inst->data;
 ```
 The "data" pointer inside PluginInstance will change every time the plugin is loaded. So you need to obtain
-this one every time before you acutally use this.
+this one every time before you actually use this.
 
 # Loading plugins
 
@@ -145,7 +157,7 @@ First of all we need to create the registry. Then we can actually load the plugi
 After that we can acquire an instance of the plugin. This instance will be kept alive across all
 hot reloads. It is safe to keep this instance. The actual plugin can be accessed from the instance.
 This pointer will basically change after every reload. So you cannot rely on this pointer. As you
-see that plugin is always pulled from the istance inside the loop. Also inside the loop we will
+see that plugin is always pulled from the instance inside the loop. Also inside the loop we will
 check if a DLL has changed in the filesystem and the reload it.
 
 # Windows problems
@@ -163,7 +175,7 @@ original file has changed you can use FreeLibrary to release the handle and then
 again. 
 
 ## PDB file
-The next problem is the PDB file. Visual studion will also keep a lock on this file.
+The next problem is the PDB file. Visual Studio will also keep a lock on this file.
 There are a number of ways to tackle this one. I have decided to use an easy way and
 just make sure that the PDB file will be generated with an unique name. You can
 achieve this in the settings:
@@ -174,7 +186,7 @@ You need to put in the following.
 ```
 $(OutDir)$(TargetName)-$([System.DateTime]::Now.ToString("HH_mm_ss_fff")).pdb
 ```
-The main drawback is that you get a new PDB file everytime you compile the DLL. So
+The main drawback is that you get a new PDB file every time you compile the DLL. So
 make sure that you clean up the files at a certain period. Also the really big point
 is that Visual Studio will not find a PDB file and therefore will issue a full compile
 on the project. This might be quite heavy depending on your code.
@@ -248,7 +260,7 @@ extern "C" {
 
 }
 ```
-I have added an allocate method as convinient method. Here is the code just in case:
+I have added an allocate method as convenient method. Here is the code just in case:
 ```C
 static void pm_allocate(ParticleData* data, uint16_t max_particles) {
 	uint32_t sz = max_particles * (sizeof(ds::vec2) + sizeof(ds::vec2) + sizeof(float) + sizeof(ds::Color) + sizeof(float) + sizeof(float) + sizeof(ds::vec4));
@@ -264,7 +276,7 @@ static void pm_allocate(ParticleData* data, uint16_t max_particles) {
 	data->index = 0;
 }
 ```
-This is a neat little trick I have learned from bitsquid. The additional char* buffer. Doing it this way all our data will be contigious in memory
+This is a neat little trick I have learned from bitsquid. The additional char* buffer. Doing it this way all our data will be contiguous in memory
 and afterwards we only need to delete this pointer.
 
 The interesting part are the emitt and update methods:
@@ -323,7 +335,7 @@ You need to run the Sandbox main.cpp and then you can actually change the code i
 
 First of all it is working. But as any piece of code it can be improved. 
 This documentation might also be too short. But I have to admit that writing documentation
-is not my favourite thing to do. If you have any questions or your having difficulties
+is not my favorite thing to do. If you have any questions or your having difficulties
 understanding it than drop me a line and I will try to make it better.
 The code is released under the MIT license.
 I am always open to feedback especially if you make the code a little better.
