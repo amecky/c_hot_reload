@@ -2,8 +2,15 @@
 
 #define FIRST_PLUGIN_NAME "first_plugin"
 
-extern "C" {
+#ifdef DEBUG
+#define DLL_EXPORT __declspec(dllexport)
+#else
+#define DLL_EXPORT
+#endif
 
+#ifdef DEBUG
+extern "C" {
+#endif
 	struct FirstPluginData {
 
 		int value;
@@ -22,6 +29,7 @@ extern "C" {
 
 	struct plugin_registry;
 
-	__declspec(dllexport) void load_first_plugin(plugin_registry* registry);
-
+	DLL_EXPORT void load_first_plugin(plugin_registry* registry);
+#ifdef DEBUG
 }
+#endif

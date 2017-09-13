@@ -6,8 +6,11 @@
 #include <string.h>
 #include <stdio.h>
 
-extern "C" {
 
+
+#ifdef DEBUG
+extern "C" {
+#endif
 	int my_add(int a, int b);
 
 	void my_set_value(FirstPluginData* data, int v);
@@ -30,8 +33,10 @@ extern "C" {
 
 	
 
-	__declspec(dllexport) void load_first_plugin(plugin_registry* registry) {		
+	DLL_EXPORT void load_first_plugin(plugin_registry* registry) {
 		registry->add(FIRST_PLUGIN_NAME, &INSTANCE, sizeof(FirstPlugin));
 		
 	}
+#ifdef DEBUG
 }
+#endif

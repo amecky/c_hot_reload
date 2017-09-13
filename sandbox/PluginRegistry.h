@@ -8,7 +8,13 @@ struct PluginInstance {
 
 struct plugin_registry {
 
-	void (*add)(const char* name, void* interf, size_t size);
+	enum ResultCode {
+		RC_OK,
+		RC_ERROR,
+		RC_NO_METHOD
+	};
+
+	void (*add)(const char* name, void* interf);
 
 	bool (*contains)(const char* name);
 
@@ -19,8 +25,10 @@ struct plugin_registry {
 	void(*check_plugins)();
 
 	bool(*load_plugin)(const char* path, const char* name);
+
+	const char*(*get_last_error)();
 };
 
-plugin_registry create_registry();
+plugin_registry* get_registry();
 
 void shutdown_registry();

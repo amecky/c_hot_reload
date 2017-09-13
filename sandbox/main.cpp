@@ -3,13 +3,18 @@
 #include <stdint.h>
 #include "PluginRegistry.h"
 #include <stdio.h>
-#include "..\dll\first_plugin.h"
+#include <first_plugin.h>
 #include "logger.h"
 
 int main() {
-	plugin_registry registry = create_registry();
-	registry.load_plugin("..\\dll\\Debug", "first_plugin");
-	PluginInstance* inst = registry.get(FIRST_PLUGIN_NAME);
+	plugin_registry* registry = get_registry();
+#ifdef DEBUG
+	registry->load_plugin("..\\dll\\Debug", "first_plugin");
+#else
+	load_first_plugin(registry);
+#endif
+
+	PluginInstance* inst = registry->get(FIRST_PLUGIN_NAME);
 	FirstPlugin* tmp = (FirstPlugin*)inst->data;
 	FirstPluginData data;
 	tmp->set_value(&data,100);
@@ -23,7 +28,7 @@ int main() {
 			log("ERROR: Canot find plugin");
 		}
 		Sleep(500);
-		registry.check_plugins();
+		registry->check_plugins();
 	}
 	shutdown_registry();
     return 0;
