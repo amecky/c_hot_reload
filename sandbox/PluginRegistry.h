@@ -8,12 +8,6 @@ struct PluginInstance {
 
 struct plugin_registry {
 
-	enum ResultCode {
-		RC_OK,
-		RC_ERROR,
-		RC_NO_METHOD
-	};
-
 	void (*add)(const char* name, void* interf);
 
 	bool (*contains)(const char* name);
